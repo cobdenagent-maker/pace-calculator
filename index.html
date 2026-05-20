@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pace Calculator — Running</title>
+<style>
+  :root {
+    --bg: #0f1119;
+    --surface: #1a1d2e;
+    --surface2: #252840;
+    --accent: #e74c3c;
+    --accent2: #3498db;
+    --green: #27ae60;
+    --yellow: #f39c12;
+    --text: #e8e8ed;
+    --text2: #9a9ab0;
+    --radius: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 20px;
+  }
+  .container { max-width: 800px; margin: 0 auto; }
+
+  /* HEADER */
+  header {
+    text-align: center;
+    padding: 24px 0 20px;
+  }
+  header h1 {
+    font-size: 26px;
+    background: linear-gradient(135deg, #e74c3c, #f39c12);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+  }
+  header p { color: var(--text2); font-size: 14px; margin-top: 4px; }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 4px;
+    margin-bottom: 16px;
+  }
+  .tab-btn {
+    flex: 1;
+    padding: 10px 8px;
+    border: none;
+    background: transparent;
+    color: var(--text2);
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card h2 {
+    font-size: 16px;
+    margin-bottom: 16px;
+    color: var(--text);
+  }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* FORM ELEMENTS */
+  .form-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .form-row:last-child { margin-bottom: 0; }
+  .form-group {
+    flex: 1;
+    min-width: 120px;
+  }
+  .form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text2);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .form-group select, .form-group input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--surface2);
+    border-radius: 8px;
+    background: var(--surface2);
+    color: var(--text);
+    font-size: 15px;
+    outline: none;
+    transition: border 0.2s;
+  }
+  .form-group select:focus, .form-group input:focus {
+    border-color: var(--accent);
+  }
+  .form-group input::placeholder { color: var(--text2); opacity: 0.5; }
+
+  /* TIME INPUT GROUP */
+  .time-group {
+    display: flex;
+    gap: 8px;
+  }
+  .time-group .form-group { min-width: 0; flex: 1; }
+  .time-group input { text-align: center; }
+  .time-sep {
+    display: flex;
+    align-items: center;
+    color: var(--text2);
+    font-size: 18px;
+    font-weight: 700;
+    padding-top: 20px;
+  }
+
+  /* QUICK SELECT */
+  .quick-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .quick-btn {
+    padding: 8px 6px;
+    border: 1px solid var(--surface2);
+    border-radius: 8px;
+    background: var(--surface2);
+    color: var(--text);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .quick-btn:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  /* RESULTS */
+  .result-card {
+    background: var(--surface2);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-top: 12px;
+  }
+  .result-card.hidden { display: none; }
+  .result-big {
+    text-align: center;
+    padding: 16px 0;
+  }
+  .result-big .value {
+    font-size: 42px;
+    font-weight: 800;
+    color: var(--accent);
+  }
+  .result-big .label {
+    font-size: 13px;
+    color: var(--text2);
+    margin-top: 2px;
+  }
+  .result-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .result-item {
+    background: var(--surface);
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+  }
+  .result-item .val {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent2);
+  }
+  .result-item .lbl {
+    font-size: 11px;
+    color: var(--text2);
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  /* SPLIT TABLE */
+  .split-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+    font-size: 14px;
+  }
+  .split-table th {
+    text-align: left;
+    padding: 8px 10px;
+    color: var(--text2);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--surface2);
+  }
+  .split-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--surface2);
+  }
+  .split-table tr:last-child td { border-bottom: none; }
+  .split-table .mid-race { background: rgba(231, 76, 60, 0.05); }
+  .split-table .finish { font-weight: 700; color: var(--accent); }
+
+  /* PACE BANDS */
+  .pace-bands {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .pace-band {
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+  }
+  .pace-band .dist {
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .pace-band .time {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--accent);
+    margin: 4px 0;
+  }
+  .pace-band .pace-label {
+    font-size: 12px;
+    color: var(--text2);
+  }
+
+  /* PREDICTOR TABLE */
+  .pred-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+  }
+  .pred-table th {
+    text-align: left;
+    padding: 10px 12px;
+    color: var(--text2);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--surface2);
+  }
+  .pred-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--surface2);
+    font-size: 14px;
+  }
+  .pred-table .input-row td {
+    background: rgba(231, 76, 60, 0.08);
+    font-weight: 700;
+  }
+  .pred-table .input-row td:first-child { border-left: 3px solid var(--accent); }
+  .pred-table .optimistic { color: var(--green); }
+  .pred-table .pessimistic { color: var(--yellow); }
+
+  .subtitle { font-size: 12px; color: var(--text2); margin-top: -12px; margin-bottom: 16px; }
+  .note {
+    font-size: 12px;
+    color: var(--text2);
+    padding: 12px;
+    background: var(--surface2);
+    border-radius: 8px;
+    margin-top: 12px;
+    line-height: 1.5;
+  }
+  .note strong { color: var(--text); }
+
+  @media (max-width: 500px) {
+    .time-group .form-group { min-width: 0; }
+    .result-big .value { font-size: 32px; }
+    .quick-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>🏃 Pace Calculator</h1>
+    <p>Race times · Splits · Equivalency</p>
+  </header>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="pace">⏱ Pace → Time</button>
+    <button class="tab-btn" data-tab="time">🎯 Time → Pace</button>
+    <button class="tab-btn" data-tab="predict">📈 Equivalency</button>
+  </div>
+
+  <!-- TAB 1: PACE TO TIME -->
+  <div class="tab-content active" id="tab-pace">
+    <div class="card">
+      <h2>Enter your pace</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Pace (minutes)</label>
+          <input type="number" id="pace-min" min="0" max="59" value="5" placeholder="min">
+        </div>
+        <div class="form-group">
+          <label>Pace (seconds)</label>
+          <input type="number" id="pace-sec" min="0" max="59" value="0" placeholder="sec">
+        </div>
+        <div class="form-group">
+          <label>Distance</label>
+          <select id="pace-dist">
+            <option value="5">5 km</option>
+            <option value="10">10 km</option>
+            <option value="21.0975">Half Marathon</option>
+            <option value="42.195">Marathon</option>
+            <option value="1">1 km</option>
+            <option value="3">3 km</option>
+            <option value="custom">Custom…</option>
+          </select>
+        </div>
+        <div class="form-group" id="custom-dist-group" style="display:none;">
+          <label>Custom (km)</label>
+          <input type="number" id="custom-dist" step="0.01" min="0.1" value="10" placeholder="km">
+        </div>
+      </div>
+      <button class="quick-btn" id="calc-pace-btn" style="width:100%;padding:12px;font-size:15px;font-weight:700;background:var(--accent);border:none;color:#fff;border-radius:8px;cursor:pointer;">Calculate</button>
+    </div>
+
+    <div class="card" id="pace-result">
+      <div class="result-card" id="pace-result-content">
+        <div class="result-big">
+          <div class="value" id="pace-finish-time">0:00</div>
+          <div class="label">Finish Time</div>
+        </div>
+        <div class="result-grid" id="pace-metrics">
+          <div class="result-item">
+            <div class="val" id="pace-kmh">0.0</div>
+            <div class="lbl">km/h</div>
+          </div>
+          <div class="result-item">
+            <div class="val" id="pace-ms">0.0</div>
+            <div class="lbl">m/s</div>
+          </div>
+          <div class="result-item">
+            <div class="val" id="pace-5k-time">—</div>
+            <div class="lbl">5k split</div>
+          </div>
+          <div class="result-item">
+            <div class="val" id="pace-10k-time">—</div>
+            <div class="lbl">10k split (marathon)</div>
+          </div>
+        </div>
+        <table class="split-table" id="pace-splits">
+          <thead><tr><th>Split</th><th>Time</th><th>Pace</th><th>Cumulative</th></tr></thead>
+          <tbody id="pace-split-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: TIME TO PACE -->
+  <div class="tab-content" id="tab-time">
+    <div class="card">
+      <h2>Enter goal time</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Distance</label>
+          <select id="time-dist">
+            <option value="5">5 km</option>
+            <option value="10">10 km</option>
+            <option value="21.0975">Half Marathon</option>
+            <option value="42.195">Marathon</option>
+            <option value="1">1 km</option>
+            <option value="3">3 km</option>
+            <option value="custom">Custom…</option>
+          </select>
+        </div>
+        <div class="form-group" id="time-custom-dist-group" style="display:none;">
+          <label>Custom (km)</label>
+          <input type="number" id="time-custom-dist" step="0.01" min="0.1" value="10" placeholder="km">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="time-group">
+          <div class="form-group">
+            <label>Hours</label>
+            <input type="number" id="time-h" min="0" max="23" value="0" placeholder="h">
+          </div>
+          <div class="time-sep">:</div>
+          <div class="form-group">
+            <label>Minutes</label>
+            <input type="number" id="time-m" min="0" max="59" value="45" placeholder="m">
+          </div>
+          <div class="time-sep">:</div>
+          <div class="form-group">
+            <label>Seconds</label>
+            <input type="number" id="time-s" min="0" max="59" value="0" placeholder="s">
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Quick targets</label>
+        </div>
+      </div>
+      <div class="quick-grid" id="quick-targets"></div>
+    </div>
+
+    <div class="card" id="time-result">
+      <div class="result-card" id="time-result-content">
+        <div class="result-big">
+          <div class="value" id="time-req-pace">0:00</div>
+          <div class="label">Required Pace (/km)</div>
+        </div>
+        <div class="result-grid">
+          <div class="result-item">
+            <div class="val" id="time-kmh">0.0</div>
+            <div class="lbl">km/h</div>
+          </div>
+          <div class="result-item">
+            <div class="val" id="time-5k-split">—</div>
+            <div class="lbl">5k split time</div>
+          </div>
+          <div class="result-item">
+            <div class="val" id="time-half-split">—</div>
+            <div class="lbl">Half split (marathon)</div>
+          </div>
+          <div class="result-item">
+            <div class="val" id="time-effort">—</div>
+            <div class="lbl">Effort level</div>
+          </div>
+        </div>
+        <div class="pace-bands" id="time-distance-paces"></div>
+        <table class="split-table" id="time-splits">
+          <thead><tr><th>Split</th><th>Time</th><th>Pace</th></tr></thead>
+          <tbody id="time-split-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: EQUIVALENCY PREDICTOR -->
+  <div class="tab-content" id="tab-predict">
+    <div class="card">
+      <h2>Enter a recent race result</h2>
+      <p class="subtitle">Predicts equivalent times for other distances using the Riegel formula</p>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Distance</label>
+          <select id="pred-dist">
+            <option value="5">5 km</option>
+            <option value="10">10 km</option>
+            <option value="21.0975">Half Marathon</option>
+            <option value="42.195">Marathon</option>
+            <option value="1">1 km</option>
+            <option value="3">3 km</option>
+            <option value="custom">Custom…</option>
+          </select>
+        </div>
+        <div class="form-group" id="pred-custom-dist-group" style="display:none;">
+          <label>Custom (km)</label>
+          <input type="number" id="pred-custom-dist" step="0.01" min="0.1" value="10" placeholder="km">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="time-group">
+          <div class="form-group">
+            <label>Hours</label>
+            <input type="number" id="pred-h" min="0" max="23" value="0" placeholder="h">
+          </div>
+          <div class="time-sep">:</div>
+          <div class="form-group">
+            <label>Minutes</label>
+            <input type="number" id="pred-m" min="0" max="59" value="55" placeholder="m">
+          </div>
+          <div class="time-sep">:</div>
+          <div class="form-group">
+            <label>Seconds</label>
+            <input type="number" id="pred-s" min="0" max="59" value="0" placeholder="s">
+          </div>
+        </div>
+      </div>
+      <button class="quick-btn" id="calc-pred-btn" style="width:100%;padding:12px;font-size:15px;font-weight:700;background:var(--accent);border:none;color:#fff;border-radius:8px;cursor:pointer;">Predict</button>
+    </div>
+
+    <div class="card" id="pred-result">
+      <div class="result-card" id="pred-result-content">
+        <table class="pred-table">
+          <thead>
+            <tr><th>Distance</th><th>Predicted Time</th><th>Pace (/km)</th><th>vs Input</th></tr>
+          </thead>
+          <tbody id="pred-body"></tbody>
+        </table>
+        <div class="note">
+          📐 Based on <strong>Riegel's formula</strong>: T₂ = T₁ × (D₂/D₁)^1.06<br>
+          <strong>Optimistic</strong> (^1.03) — best case for longer distance<br>
+          <strong>Pessimistic</strong> (^1.09) — if endurance needs work
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer style="text-align:center;padding:20px 0;color:var(--text2);font-size:12px;">
+    Pace Calculator · All distances in kilometres
+  </footer>
+</div>
+
+<script>
+// ─── UTILITIES ────────────────────────────────────────────
+function paceToKmh(min, sec) {
+  const totalMin = min + sec / 60;
+  return 60 / totalMin;
+}
+
+function paceToMs(min, sec) {
+  return 1000 / (min * 60 + sec);
+}
+
+function timeToSeconds(h, m, s) {
+  return h * 3600 + m * 60 + s;
+}
+
+function secondsToTime(secs) {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = Math.round(secs % 60);
+  if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+
+function secondsToPace(secsPerKm) {
+  const m = Math.floor(secsPerKm / 60);
+  const s = Math.round(secsPerKm % 60);
+  return `${m}:${String(s).padStart(2,'0')}/km`;
+}
+
+function paceSecToPaceStr(secs) {
+  const m = Math.floor(secs / 60);
+  const s = Math.round(secs % 60);
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+
+function paceStrToSec(paceStr) {
+  const parts = paceStr.split(':');
+  return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+}
+
+function riegel(t1Sec, d1Km, d2Km, exp) {
+  return t1Sec * Math.pow(d2Km / d1Km, exp);
+}
+
+function effortLabel(paceSecPerKm) {
+  if (paceSecPerKm <= 180) return '🔥 Elite';
+  if (paceSecPerKm <= 210) return '⚡ Very Fast';
+  if (paceSecPerKm <= 240) return '🏃 Fast';
+  if (paceSecPerKm <= 270) return '✅ Moderate';
+  if (paceSecPerKm <= 300) return '↔️ Steady';
+  if (paceSecPerKm <= 330) return '🐢 Easy';
+  return '🚶 Recovery';
+}
+
+// ─── TABS ─────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ─── DISTANCE TOGGLE HELPERS ──────────────────────────────
+function setupDistToggle(selectId, customId) {
+  const sel = document.getElementById(selectId);
+  const grp = document.getElementById(customId);
+  sel.addEventListener('change', () => {
+    grp.style.display = sel.value === 'custom' ? 'block' : 'none';
+  });
+}
+setupDistToggle('pace-dist', 'custom-dist-group');
+setupDistToggle('time-dist', 'time-custom-dist-group');
+setupDistToggle('pred-dist', 'pred-custom-dist-group');
+
+function getDist(selectId, customId) {
+  const sel = document.getElementById(selectId);
+  return sel.value === 'custom' ? parseFloat(document.getElementById(customId).value) : parseFloat(sel.value);
+}
+
+// ─── TAB 2: QUICK TARGETS ─────────────────────────────────
+const quickTargets = {
+  5: [
+    { label: 'Sub-15', h:0, m:15, s:0 },
+    { label: 'Sub-16', h:0, m:16, s:0 },
+    { label: 'Sub-17', h:0, m:17, s:0 },
+    { label: 'Sub-18', h:0, m:18, s:0 },
+    { label: 'Sub-19', h:0, m:19, s:0 },
+    { label: 'Sub-20', h:0, m:20, s:0 },
+    { label: 'Sub-22', h:0, m:22, s:0 },
+    { label: 'Sub-25', h:0, m:25, s:0 },
+    { label: 'Sub-30', h:0, m:30, s:0 },
+  ],
+  10: [
+    { label: 'Sub-35', h:0, m:35, s:0 },
+    { label: 'Sub-38', h:0, m:38, s:0 },
+    { label: 'Sub-40', h:0, m:40, s:0 },
+    { label: 'Sub-42', h:0, m:42, s:0 },
+    { label: 'Sub-45', h:0, m:45, s:0 },
+    { label: 'Sub-48', h:0, m:48, s:0 },
+    { label: 'Sub-50', h:0, m:50, s:0 },
+    { label: 'Sub-55', h:0, m:55, s:0 },
+    { label: 'Sub-60', h:1, m:0, s:0 },
+  ],
+  21.0975: [
+    { label: 'Sub-1:15', h:1, m:15, s:0 },
+    { label: 'Sub-1:20', h:1, m:20, s:0 },
+    { label: 'Sub-1:25', h:1, m:25, s:0 },
+    { label: 'Sub-1:30', h:1, m:30, s:0 },
+    { label: 'Sub-1:35', h:1, m:35, s:0 },
+    { label: 'Sub-1:40', h:1, m:40, s:0 },
+    { label: 'Sub-1:45', h:1, m:45, s:0 },
+    { label: 'Sub-1:50', h:1, m:50, s:0 },
+    { label: 'Sub-2:00', h:2, m:0, s:0 },
+  ],
+  42.195: [
+    { label: 'Sub-2:30', h:2, m:30, s:0 },
+    { label: 'Sub-2:45', h:2, m:45, s:0 },
+    { label: 'Sub-3:00', h:3, m:0, s:0 },
+    { label: 'Sub-3:15', h:3, m:15, s:0 },
+    { label: 'Sub-3:30', h:3, m:30, s:0 },
+    { label: 'Sub-3:45', h:3, m:45, s:0 },
+    { label: 'Sub-4:00', h:4, m:0, s:0 },
+    { label: 'Sub-4:30', h:4, m:30, s:0 },
+    { label: 'Sub-5:00', h:5, m:0, s:0 },
+  ],
+};
+
+function renderQuickTargets() {
+  const sel = document.getElementById('time-dist');
+  const grid = document.getElementById('quick-targets');
+  const dist = sel.value === 'custom' ? 10 : parseFloat(sel.value);
+  // For custom, round to nearest known
+  let targets;
+  if (dist <= 5) targets = quickTargets[5];
+  else if (dist <= 10) targets = quickTargets[10];
+  else if (dist <= 21.0975) targets = quickTargets[21.0975];
+  else targets = quickTargets[42.195];
+
+  grid.innerHTML = '';
+  targets.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'quick-btn';
+    btn.textContent = t.label;
+    btn.addEventListener('click', () => {
+      document.getElementById('time-h').value = t.h;
+      document.getElementById('time-m').value = t.m;
+      document.getElementById('time-s').value = t.s;
+      calcTimeToPace();
+    });
+    grid.appendChild(btn);
+  });
+}
+document.getElementById('time-dist').addEventListener('change', renderQuickTargets);
+renderQuickTargets();
+
+// ─── TAB 1: PACE TO TIME ──────────────────────────────────
+function calcPaceToTime() {
+  const min = parseFloat(document.getElementById('pace-min').value) || 0;
+  const sec = parseFloat(document.getElementById('pace-sec').value) || 0;
+  const dist = getDist('pace-dist', 'custom-dist');
+  if (min === 0 && sec === 0 || dist <= 0) return;
+
+  const paceSecPerKm = min * 60 + sec;
+  const totalSecs = paceSecPerKm * dist;
+  const kmh = paceToKmh(min, sec);
+
+  document.getElementById('pace-finish-time').textContent = secondsToTime(totalSecs);
+  document.getElementById('pace-kmh').textContent = kmh.toFixed(1);
+  document.getElementById('pace-ms').textContent = (kmh / 3.6).toFixed(1);
+
+  // 5k split
+  const sec5k = paceSecPerKm * 5;
+  document.getElementById('pace-5k-time').textContent = secondsToTime(sec5k);
+
+  // 10k split
+  if (dist >= 21.0975) {
+    const sec10k = paceSecPerKm * 10;
+    document.getElementById('pace-10k-time').textContent = secondsToTime(sec10k);
+    document.getElementById('pace-10k-time').parentElement.style.display = 'block';
+  } else {
+    document.getElementById('pace-10k-time').parentElement.style.display = 'none';
+  }
+
+  // Splits
+  const tbody = document.getElementById('pace-split-body');
+  tbody.innerHTML = '';
+  const steps = dist <= 5 ? [1] : dist <= 10 ? [1] : dist <= 21.0975 ? [1, 5] : [1, 5, 10, 'half'];
+  let cumulativePace = 0;
+
+  if (dist <= 5) {
+    for (let i = 1; i <= Math.ceil(dist); i++) {
+      const kmActual = i <= dist ? 1 : dist - (i - 1);
+      const row = document.createElement('tr');
+      const kmTime = paceSecPerKm * kmActual;
+      cumulativePace += kmTime;
+      const cls = i === Math.ceil(dist) ? 'finish' : '';
+      row.className = cls;
+      row.innerHTML = `<td>${i === Math.ceil(dist) ? `Finish (${(kmActual).toFixed(2)}km)` : `KM ${i}`}</td>
+        <td>${secondsToTime(kmTime)}</td>
+        <td>${secondsToPace(paceSecPerKm)}</td>
+        <td>${secondsToTime(cumulativePace)}</td>`;
+      tbody.appendChild(row);
+    }
+  } else {
+    // Per km splits
+    for (let i = 1; i <= Math.ceil(dist); i++) {
+      const kmActual = i <= dist ? 1 : dist - (i - 1);
+      const kmTime = paceSecPerKm * kmActual;
+      cumulativePace += kmTime;
+      const row = document.createElement('tr');
+      const isMid = (dist >= 21.0975 && i === Math.round(dist/2)) || 
+                    (dist >= 10 && i === Math.round(dist/2)) ||
+                    (dist >= 21.0975 && i === 10) ||
+                    (dist >= 42.195 && i === 21);
+      const cls = i === Math.ceil(dist) ? 'finish' : isMid ? 'mid-race' : '';
+      row.className = cls;
+      row.innerHTML = `<td>${i === Math.ceil(dist) ? `Finish (${(kmActual).toFixed(2)}km)` : `KM ${i}`}</td>
+        <td>${secondsToTime(kmTime)}</td>
+        <td>${secondsToPace(paceSecPerKm)}</td>
+        <td>${secondsToTime(cumulativePace)}</td>`;
+      tbody.appendChild(row);
+    }
+  }
+}
+
+document.getElementById('calc-pace-btn').addEventListener('click', calcPaceToTime);
+document.getElementById('pace-min').addEventListener('input', calcPaceToTime);
+document.getElementById('pace-sec').addEventListener('input', calcPaceToTime);
+document.getElementById('pace-dist').addEventListener('change', calcPaceToTime);
+document.getElementById('custom-dist').addEventListener('input', calcPaceToTime);
+calcPaceToTime();
+
+// ─── TAB 2: TIME TO PACE ──────────────────────────────────
+function calcTimeToPace() {
+  const h = parseFloat(document.getElementById('time-h').value) || 0;
+  const m = parseFloat(document.getElementById('time-m').value) || 0;
+  const s = parseFloat(document.getElementById('time-s').value) || 0;
+  const dist = getDist('time-dist', 'time-custom-dist');
+  const totalSecs = timeToSeconds(h, m, s);
+  if (totalSecs <= 0 || dist <= 0) return;
+
+  const paceSecPerKm = totalSecs / dist;
+  const kmh = dist / (totalSecs / 3600);
+
+  document.getElementById('time-req-pace').textContent = secondsToPace(paceSecPerKm);
+  document.getElementById('time-kmh').textContent = kmh.toFixed(1);
+  document.getElementById('time-effort').textContent = effortLabel(paceSecPerKm);
+
+  // 5k split
+  document.getElementById('time-5k-split').textContent = secondsToTime(paceSecPerKm * 5);
+
+  // Half split for marathon
+  if (dist >= 42.195) {
+    document.getElementById('time-half-split').textContent = secondsToTime(paceSecPerKm * 21.0975);
+    document.getElementById('time-half-split').parentElement.style.display = 'block';
+  } else {
+    document.getElementById('time-half-split').parentElement.style.display = 'none';
+  }
+
+  // Distance bands
+  const bands = document.getElementById('time-distance-paces');
+  bands.innerHTML = '';
+  const distances = [1, 5, 10, 21.0975, 42.195];
+  distances.forEach(d => {
+    if (d <= dist * 2 || d === dist) {
+      const band = document.createElement('div');
+      band.className = 'pace-band';
+      const dLabel = d === 21.0975 ? 'Half Marathon' : d === 42.195 ? 'Marathon' : `${d} km`;
+      band.innerHTML = `
+        <div class="dist">${dLabel}</div>
+        <div class="time">${secondsToTime(paceSecPerKm * d)}</div>
+        <div class="pace-label">@ ${secondsToPace(paceSecPerKm)}</div>
+      `;
+      bands.appendChild(band);
+    }
+  });
+
+  // KM splits
+  const tbody = document.getElementById('time-split-body');
+  tbody.innerHTML = '';
+  let cumulativePace = 0;
+  for (let i = 1; i <= Math.ceil(dist); i++) {
+    const kmActual = i <= dist ? 1 : dist - (i - 1);
+    const kmTime = paceSecPerKm * kmActual;
+    cumulativePace += kmTime;
+    const row = document.createElement('tr');
+    const cls = i === Math.ceil(dist) ? 'finish' : '';
+    row.className = cls;
+    row.innerHTML = `<td>${i === Math.ceil(dist) ? `Finish (${(kmActual).toFixed(2)}km)` : `KM ${i}`}</td>
+      <td>${secondsToTime(cumulativePace)}</td>
+      <td>${secondsToPace(paceSecPerKm)}</td>`;
+    tbody.appendChild(row);
+  }
+}
+
+document.getElementById('time-h').addEventListener('input', calcTimeToPace);
+document.getElementById('time-m').addEventListener('input', calcTimeToPace);
+document.getElementById('time-s').addEventListener('input', calcTimeToPace);
+document.getElementById('time-dist').addEventListener('change', () => {
+  renderQuickTargets();
+  calcTimeToPace();
+});
+document.getElementById('time-custom-dist').addEventListener('input', calcTimeToPace);
+calcTimeToPace();
+
+// ─── TAB 3: EQUIVALENCY ───────────────────────────────────
+function calcPredictions() {
+  const dist = getDist('pred-dist', 'pred-custom-dist');
+  const h = parseFloat(document.getElementById('pred-h').value) || 0;
+  const m = parseFloat(document.getElementById('pred-m').value) || 0;
+  const s = parseFloat(document.getElementById('pred-s').value) || 0;
+  const totalSecs = timeToSeconds(h, m, s);
+  if (totalSecs <= 0 || dist <= 0) return;
+
+  const tbody = document.getElementById('pred-body');
+  tbody.innerHTML = '';
+
+  const targets = [
+    { label: '1 km', dist: 1 },
+    { label: '3 km', dist: 3 },
+    { label: '5 km', dist: 5 },
+    { label: '10 km', dist: 10 },
+    { label: 'Half Marathon', dist: 21.0975 },
+    { label: 'Marathon', dist: 42.195 },
+  ];
+
+  targets.forEach(t => {
+    const std = riegel(totalSecs, dist, t.dist, 1.06);
+    const opt = riegel(totalSecs, dist, t.dist, 1.03);
+    const pes = riegel(totalSecs, dist, t.dist, 1.09);
+    const paceStd = std / t.dist;
+    const paceOpt = opt / t.dist;
+    const pacePes = pes / t.dist;
+
+    // Equivalent performance level = what pace would predict this time
+    // Actually compute what this prediction says about ability
+
+    const row = document.createElement('tr');
+    if (Math.abs(t.dist - dist) < 0.01) row.className = 'input-row';
+
+    const vs = t.dist > dist
+      ? `<span class="optimistic">+${(std - totalSecs)/60 >= 0 ? '' : ''}${(std - totalSecs) >= 0 ? '+' : ''}${Math.round((std - totalSecs)/60)}:${String(Math.abs(Math.round((std - totalSecs)%60))).padStart(2,'0')}</span>`
+      : t.dist < dist
+        ? `<span class="pessimistic">-${Math.round((totalSecs - std)/60)}:${String(Math.abs(Math.round((totalSecs - std)%60))).padStart(2,'0')}</span>`
+        : '← input';
+
+    row.innerHTML = `
+      <td><strong>${t.label}</strong></td>
+      <td>
+        <strong>${secondsToTime(std)}</strong>
+        ${t.dist !== dist ? `<br><span style="font-size:11px;color:var(--text2);">opt: ${secondsToTime(opt)} · pes: ${secondsToTime(pes)}</span>` : ''}
+      </td>
+      <td>${secondsToPace(paceStd)}</td>
+      <td>${vs}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+document.getElementById('calc-pred-btn').addEventListener('click', calcPredictions);
+document.getElementById('pred-h').addEventListener('input', calcPredictions);
+document.getElementById('pred-m').addEventListener('input', calcPredictions);
+document.getElementById('pred-s').addEventListener('input', calcPredictions);
+document.getElementById('pred-dist').addEventListener('change', () => {
+  if (document.getElementById('pred-dist').value !== 'custom') calcPredictions();
+});
+document.getElementById('pred-custom-dist').addEventListener('input', calcPredictions);
+calcPredictions();
+
+// ─── KEYBOARD SHORTCUT: Enter to calculate ────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.querySelector('.tab-content.active')) {
+    const active = document.querySelector('.tab-content.active');
+    if (active.id === 'tab-pace') calcPaceToTime();
+    if (active.id === 'tab-time') calcTimeToPace();
+    if (active.id === 'tab-predict') calcPredictions();
+  }
+});
+</script>
+
+</body>
+</html>
