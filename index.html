@@ -320,6 +320,7 @@
     <button class="tab-btn" data-tab="time">🎯 Time → Pace</button>
     <button class="tab-btn" data-tab="predict">📈 Equivalency</button>
     <button class="tab-btn" data-tab="hrzones">❤️ Heart Zones</button>
+    <button class="tab-btn" data-tab="race">🏁 Race</button>
   </div>
 
   <!-- TAB 1: PACE TO TIME -->
@@ -578,6 +579,94 @@
         <div class="note" style="margin-top:16px;">
           💡 <strong>How to use:</strong> Subtract RHR from MHR to get your <strong>Heart Rate Reserve (HRR)</strong>. Each zone is a percentage of that reserve plus your resting rate. Zone 2 is ideal for building aerobic base; Zone 4 for lactate threshold work.
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 5: RACE (COMBINED) -->
+  <div class="tab-content" id="tab-race">
+    <div class="card">
+      <h2>Enter your race goal &amp; heart data</h2>
+      <p class="subtitle">Shows target pace, HR zones, and equivalent training paces</p>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Distance</label>
+          <select id="race-dist">
+            <option value="5">5 km</option>
+            <option value="10">10 km</option>
+            <option value="21.0975">Half Marathon</option>
+            <option value="42.195">Marathon</option>
+            <option value="1">1 km</option>
+            <option value="3">3 km</option>
+            <option value="custom">Custom…</option>
+          </select>
+        </div>
+        <div class="form-group" id="race-custom-dist-group" style="display:none;">
+          <label>Custom (km)</label>
+          <input type="number" id="race-custom-dist" step="0.01" min="0.1" value="10" placeholder="km">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="time-group">
+          <div class="form-group">
+            <label>Hours</label>
+            <input type="number" id="race-h" min="0" max="23" value="0" placeholder="h">
+          </div>
+          <div class="time-sep">:</div>
+          <div class="form-group">
+            <label>Minutes</label>
+            <input type="number" id="race-m" min="0" max="59" value="45" placeholder="m">
+          </div>
+          <div class="time-sep">:</div>
+          <div class="form-group">
+            <label>Seconds</label>
+            <input type="number" id="race-s" min="0" max="59" value="0" placeholder="s">
+          </div>
+        </div>
+      </div>
+      <div class="form-row" style="margin-top:8px;">
+        <div class="form-group">
+          <label>Max Heart Rate (MHR)</label>
+          <input type="number" id="race-mhr" min="100" max="250" value="185" placeholder="bpm">
+        </div>
+        <div class="form-group">
+          <label>Resting Heart Rate (RHR)</label>
+          <input type="number" id="race-rhr" min="30" max="100" value="58" placeholder="bpm">
+        </div>
+      </div>
+      <button class="quick-btn" id="calc-race-btn" style="width:100%;padding:12px;font-size:15px;font-weight:700;background:var(--accent);border:none;color:#fff;border-radius:8px;cursor:pointer;">Calculate</button>
+    </div>
+
+    <div class="card" id="race-target">
+      <h2>Race Target</h2>
+      <div class="result-card" id="race-target-content">
+        <div class="result-big">
+          <div class="value" id="race-finish-time">0:00</div>
+          <div class="label">Goal Time</div>
+        </div>
+        <div class="result-grid">
+          <div class="result-item">
+            <div class="val" id="race-pace">—</div>
+            <div class="lbl">Required Pace /km</div>
+          </div>
+          <div class="result-item">
+            <div class="val" id="race-kmh">—</div>
+            <div class="lbl">Speed (km/h)</div>
+          </div>
+          <div class="result-item">
+            <div class="val" id="race-hr-at">—</div>
+            <div class="lbl">Est. Race HR</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="race-zone-card">
+      <h2>Training Paces by Heart Rate Zone</h2>
+      <div class="subtitle" id="race-subtitle">Based on your goal race and heart data</div>
+      <div id="race-zone-grid"></div>
+      <div class="note" style="margin-top:16px;">
+        📐 Target paces estimated via <strong>Riegel formula</strong> from your race goal. Zone 1 is recovery — slow jog or walk. Zone 3 is marathon-to-half-marathon effort. Zone 4 is threshold (lactate turnpoint). Zone 5 is VO₂ max intervals.
       </div>
     </div>
   </div>
@@ -1039,6 +1128,184 @@ document.querySelectorAll('#hr-profiles .quick-btn').forEach(btn => {
 
 calcHRZones();
 
+// ─── TAB 5: RACE ───────────────────────────────────────────
+const raceDistanceNames = {
+  1: '1 km', 3: '3 km', 5: '5 km', 10: '10 km',
+  21.0975: 'Half Marathon', 42.195: 'Marathon'
+};
+
+// Standard distances for zone mapping
+const raceStdDists = [1, 3, 5, 10, 15, 21.0975, 42.195];
+
+function riegel(d1, t1Sec, d2) {
+  return t1Sec * Math.pow(d2 / d1, 1.06);
+}
+
+function secToPace(secPerKm) {
+  const m = Math.floor(secPerKm / 60);
+  const s = Math.round(secPerKm % 60);
+  return m + ':' + String(s).padStart(2, '0');
+}
+
+function secToHMS(totalSec) {
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = Math.round(totalSec % 60);
+  if (h > 0) return h + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  return m + ':' + String(s).padStart(2, '0');
+}
+
+function estRaceHR(dist, mhr, rhr) {
+  // Estimate what % of HRR a race effort typically uses
+  const intensityMap = {
+    1: 0.95, 3: 0.93, 5: 0.92, 10: 0.88,
+    15: 0.86, 21.0975: 0.85, 42.195: 0.80
+  };
+  const closest = Object.keys(intensityMap).reduce((a, b) =>
+    Math.abs(b - dist) < Math.abs(a - dist) ? b : a
+  );
+  const intensity = intensityMap[closest];
+  return Math.round((mhr - rhr) * intensity + rhr);
+}
+
+// Palette colors for each zone
+const zoneColors = ['#3498db', '#27ae60', '#f39c12', '#e67e22', '#e74c3c'];
+const zoneNames = ['Recovery', 'Endurance', 'Tempo', 'Threshold', 'VO₂ Max'];
+const zoneIntensities = [0.55, 0.65, 0.75, 0.85, 0.95]; // mid-point for display
+const zoneFeel = [
+  'Conversational, very easy',
+  'Full sentences, aerobic',
+  'Short phrases, comfortably hard',
+  'Single words, uncomfortable',
+  'All-out, gasping'
+];
+
+// Zone pitch: how much slower/faster than marathon pace (lower = faster)
+// We compute paces from predicted race times, then assign zone pace as a range
+function calcRace() {
+  const distSelect = document.getElementById('race-dist');
+  let dist = parseFloat(distSelect.value);
+  if (distSelect.value === 'custom') {
+    dist = parseFloat(document.getElementById('race-custom-dist').value);
+  }
+  const h = parseFloat(document.getElementById('race-h').value) || 0;
+  const m = parseFloat(document.getElementById('race-m').value) || 0;
+  const s = parseFloat(document.getElementById('race-s').value) || 0;
+  const mhr = parseFloat(document.getElementById('race-mhr').value);
+  const rhr = parseFloat(document.getElementById('race-rhr').value);
+
+  if (!dist || dist <= 0) return;
+  if (h === 0 && m === 0 && s === 0) return;
+  if (!mhr || !rhr || mhr <= rhr) return;
+
+  const totalSec = h * 3600 + m * 60 + s;
+  const pacePerKm = totalSec / dist;
+
+  // Display race target
+  document.getElementById('race-finish-time').textContent = secToHMS(totalSec);
+  document.getElementById('race-pace').textContent = secToPace(pacePerKm) + ' /km';
+  document.getElementById('race-kmh').textContent = (60 / (pacePerKm / 60)).toFixed(1);
+  document.getElementById('race-hr-at').textContent = estRaceHR(dist, mhr, rhr) + ' bpm';
+
+  // Predict times at standard distances via Riegel
+  const predicted = {};
+  raceStdDists.forEach(d => {
+    predicted[d] = riegel(dist, totalSec, d);
+  });
+
+  // Get paces (sec/km) for key distances
+  const pace5K = predicted[5] / 5;
+  const pace10K = predicted[10] / 10;
+  const paceHM = predicted[21.0975] / 21.0975;
+  const paceMara = predicted[42.195] / 42.195;
+  const pace3K = predicted[3] / 3;
+
+  // HRR
+  const hrr = mhr - rhr;
+
+  // Zone definitions with pace ranges
+  const zoneDefs = [
+    { z: 1, label: '<60%', pctLow: 0, pctHigh: 60, paceLow: paceMara + 50, paceHigh: paceMara + 90 }, // recovery
+    { z: 2, label: '60–70%', pctLow: 60, pctHigh: 70, paceLow: paceMara + 25, paceHigh: paceMara + 50 }, // aerobic
+    { z: 3, label: '70–80%', pctLow: 70, pctHigh: 80, paceLow: paceHM, paceHigh: paceMara + 25 }, // tempo: HM to a bit slower than marathon
+    { z: 4, label: '80–90%', pctLow: 80, pctHigh: 90, paceLow: pace10K, paceHigh: paceHM }, // threshold
+    { z: 5, label: '90–100%', pctLow: 90, pctHigh: 100, paceLow: pace3K, paceHigh: pace5K }, // VO2
+  ];
+
+  const grid = document.getElementById('race-zone-grid');
+  grid.innerHTML = '';
+
+  zoneDefs.forEach(zd => {
+    const lowBpm = zd.z === 1 ? 0 : Math.round(hrr * (zd.pctLow / 100) + rhr);
+    const highBpm = Math.round(hrr * (zd.pctHigh / 100) + rhr);
+    const bpmStr = zd.z === 1 ? '&lt;' + highBpm : lowBpm + '–' + highBpm;
+    const pctStr = zd.z === 1 ? '&lt;60%' : zd.label;
+
+    const paceRangeStr = secToPace(zd.paceHigh) + ' – ' + secToPace(zd.paceLow);
+
+    const card = document.createElement('div');
+    card.style.cssText = `
+      background: var(--surface2);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      border-left: 5px solid ${zoneColors[zd.z - 1]};
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    `;
+
+    card.innerHTML = `
+      <div style="min-width:100px;flex:1;">
+        <div style="font-size:12px;color:${zoneColors[zd.z - 1]};font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Zone ${zd.z}</div>
+        <div style="font-size:18px;font-weight:800;margin:1px 0;">${zoneNames[zd.z - 1]}</div>
+        <div style="font-size:11px;color:var(--text2);font-style:italic;">${zoneFeel[zd.z - 1]}</div>
+      </div>
+      <div style="text-align:center;min-width:75px;">
+        <div style="font-size:20px;font-weight:800;color:${zoneColors[zd.z - 1]};">${bpmStr}</div>
+        <div style="font-size:10px;color:var(--text2);text-transform:uppercase;">bpm</div>
+      </div>
+      <div style="text-align:center;min-width:65px;">
+        <div style="font-size:13px;font-weight:700;color:var(--text);">${pctStr}</div>
+        <div style="font-size:10px;color:var(--text2);text-transform:uppercase;">HRR</div>
+      </div>
+      <div style="text-align:center;min-width:110px;">
+        <div style="font-size:19px;font-weight:800;color:var(--accent2);">${paceRangeStr}</div>
+        <div style="font-size:10px;color:var(--text2);text-transform:uppercase;">pace /km</div>
+      </div>
+    `;
+
+    grid.appendChild(card);
+  });
+
+  // Update subtitle with distance name
+  const distName = raceDistanceNames[dist] || (dist + ' km');
+  document.getElementById('race-subtitle').textContent =
+    'From your ' + distName + ' goal of ' + secToHMS(totalSec) + ' · HRR: ' + hrr + ' bpm';
+}
+
+// Event listeners for race tab
+document.addEventListener('DOMContentLoaded', () => {
+  // Distance toggle for race tab
+  document.getElementById('race-dist').addEventListener('change', () => {
+    const show = document.getElementById('race-dist').value === 'custom';
+    document.getElementById('race-custom-dist-group').style.display = show ? 'block' : 'none';
+  });
+  document.getElementById('race-custom-dist').addEventListener('input', calcRace);
+
+  document.getElementById('race-dist').addEventListener('change', calcRace);
+  document.getElementById('race-h').addEventListener('input', calcRace);
+  document.getElementById('race-m').addEventListener('input', calcRace);
+  document.getElementById('race-s').addEventListener('input', calcRace);
+  document.getElementById('race-mhr').addEventListener('input', calcRace);
+  document.getElementById('race-rhr').addEventListener('input', calcRace);
+
+  document.getElementById('calc-race-btn').addEventListener('click', calcRace);
+});
+
+calcRace();
+
 // ─── KEYBOARD SHORTCUT: Enter to calculate ────────────────
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && document.querySelector('.tab-content.active')) {
@@ -1046,6 +1313,7 @@ document.addEventListener('keydown', e => {
     if (active.id === 'tab-pace') calcPaceToTime();
     if (active.id === 'tab-time') calcTimeToPace();
     if (active.id === 'tab-predict') calcPredictions();
+    if (active.id === 'tab-race') calcRace();
   }
 });
 </script>
