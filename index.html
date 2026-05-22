@@ -319,6 +319,7 @@
     <button class="tab-btn active" data-tab="pace">⏱ Pace → Time</button>
     <button class="tab-btn" data-tab="time">🎯 Time → Pace</button>
     <button class="tab-btn" data-tab="predict">📈 Equivalency</button>
+    <button class="tab-btn" data-tab="hrzones">❤️ Heart Zones</button>
   </div>
 
   <!-- TAB 1: PACE TO TIME -->
@@ -523,6 +524,59 @@
           📐 Based on <strong>Riegel's formula</strong>: T₂ = T₁ × (D₂/D₁)^1.06<br>
           <strong>Optimistic</strong> (^1.03) — best case for longer distance<br>
           <strong>Pessimistic</strong> (^1.09) — if endurance needs work
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: HEART RATE ZONES -->
+  <div class="tab-content" id="tab-hrzones">
+    <div class="card">
+      <h2>Enter your heart rate info</h2>
+      <p class="subtitle">Karvonen formula: Target HR = (MHR − RHR) × intensity + RHR</p>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Max Heart Rate (MHR)</label>
+          <input type="number" id="hr-mhr" min="100" max="250" value="185" placeholder="bpm">
+        </div>
+        <div class="form-group">
+          <label>Resting Heart Rate (RHR)</label>
+          <input type="number" id="hr-rhr" min="30" max="100" value="58" placeholder="bpm">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Quick fill</label>
+        </div>
+      </div>
+      <div class="quick-grid" id="hr-profiles">
+        <button class="quick-btn" data-mhr="175" data-rhr="55">🫀 Runner</button>
+        <button class="quick-btn" data-mhr="185" data-rhr="60">🏃 Athlete</button>
+        <button class="quick-btn" data-mhr="190" data-rhr="65">⚡ Cyclist</button>
+        <button class="quick-btn" data-mhr="198" data-rhr="45">🔥 Elite</button>
+        <button class="quick-btn" data-mhr="180" data-rhr="50">🎯 Fit</button>
+        <button class="quick-btn" data-mhr="220" data-rhr="50">🧮 220-age</button>
+      </div>
+    </div>
+
+    <div class="card" id="hr-result">
+      <h2>Your 5 Heart Rate Zones</h2>
+      <div class="result-card" id="hr-result-content">
+        <div class="result-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 16px;">
+          <div class="result-item">
+            <div class="val" id="hr-hrr">128</div>
+            <div class="lbl">HR Reserve (HRR)</div>
+          </div>
+          <div class="result-item">
+            <div class="val" id="hr-age-est">—</div>
+            <div class="lbl">Age estimate (220 − MHR)</div>
+          </div>
+        </div>
+
+        <div id="hr-zone-grid" style="display:grid;gap:10px;"></div>
+
+        <div class="note" style="margin-top:16px;">
+          💡 <strong>How to use:</strong> Subtract RHR from MHR to get your <strong>Heart Rate Reserve (HRR)</strong>. Each zone is a percentage of that reserve plus your resting rate. Zone 2 is ideal for building aerobic base; Zone 4 for lactate threshold work.
         </div>
       </div>
     </div>
@@ -903,6 +957,87 @@ document.getElementById('pred-dist').addEventListener('change', () => {
 });
 document.getElementById('pred-custom-dist').addEventListener('input', calcPredictions);
 calcPredictions();
+
+// ─── TAB 4: HEART RATE ZONES ──────────────────────────────
+const hrZones = [
+  { zone: 1, name: 'Recovery',      pctLow: 0, pctHigh: 60, color: '#3498db', desc: 'Very light — warm-up, cool-down, recovery runs', runFeel: 'Conversational pace' },
+  { zone: 2, name: 'Endurance',     pctLow: 60, pctHigh: 70, color: '#27ae60', desc: 'Light — aerobic base building, long runs', runFeel: 'Can speak in full sentences' },
+  { zone: 3, name: 'Tempo',         pctLow: 70, pctHigh: 80, color: '#f39c12', desc: 'Moderate — steady state, marathon pace', runFeel: 'Comfortably hard, short phrases' },
+  { zone: 4, name: 'Threshold',     pctLow: 80, pctHigh: 90, color: '#e67e22', desc: 'Hard — lactate threshold, 10K-HM pace', runFeel: 'Uncomfortable, single words' },
+  { zone: 5, name: 'VO₂ Max',       pctLow: 90, pctHigh: 100, color: '#e74c3c', desc: 'Maximum — sprint intervals, 5K-3K pace', runFeel: 'All-out, gasping' },
+];
+
+function calcHRZones() {
+  const mhr = parseFloat(document.getElementById('hr-mhr').value);
+  const rhr = parseFloat(document.getElementById('hr-rhr').value);
+  if (!mhr || !rhr || mhr <= rhr) return;
+
+  const hrr = mhr - rhr;
+  document.getElementById('hr-hrr').textContent = hrr + ' bpm';
+  
+  const estAge = Math.round(220 - mhr);
+  document.getElementById('hr-age-est').textContent = estAge > 0 && estAge < 120 ? `${estAge} yrs` : '—';
+
+  const grid = document.getElementById('hr-zone-grid');
+  grid.innerHTML = '';
+
+  hrZones.forEach(z => {
+    const highHR = Math.round(hrr * (z.pctHigh / 100) + rhr);
+    const lowHR = z.zone === 1 ? 0 : Math.round(hrr * (z.pctLow / 100) + rhr);
+    const bpmDisplay = z.zone === 1
+      ? `<div style="font-size:26px;font-weight:800;color:${z.color};">&lt;${highHR}</div>`
+      : `<div style="font-size:26px;font-weight:800;color:${z.color};">${lowHR}–${highHR}</div>`;
+    const pctDisplay = z.zone === 1
+      ? `<div style="font-size:18px;font-weight:700;color:var(--text);">&lt;${z.pctHigh}%</div>`
+      : `<div style="font-size:18px;font-weight:700;color:var(--text);">${z.pctLow}–${z.pctHigh}%</div>`;
+
+    const card = document.createElement('div');
+    card.style.cssText = `
+      background: var(--surface2);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      border-left: 5px solid ${z.color};
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+    `;
+
+    card.innerHTML = `
+      <div style="flex:1;min-width:140px;">
+        <div style="font-size:12px;color:${z.color};font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Zone ${z.zone}</div>
+        <div style="font-size:20px;font-weight:800;margin:2px 0;">${z.name}</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.4;">${z.desc}</div>
+      </div>
+      <div style="text-align:center;min-width:100px;">
+        ${bpmDisplay}
+        <div style="font-size:11px;color:var(--text2);text-transform:uppercase;">bpm</div>
+      </div>
+      <div style="text-align:center;min-width:80px;">
+        ${pctDisplay}
+        <div style="font-size:11px;color:var(--text2);text-transform:uppercase;">of HRR</div>
+      </div>
+      <div style="flex:1;min-width:140px;font-size:12px;color:var(--text2);font-style:italic;">
+        🏃 ${z.runFeel}
+      </div>
+    `;
+
+    grid.appendChild(card);
+  });
+}
+
+document.getElementById('hr-mhr').addEventListener('input', calcHRZones);
+document.getElementById('hr-rhr').addEventListener('input', calcHRZones);
+
+document.querySelectorAll('#hr-profiles .quick-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById('hr-mhr').value = btn.dataset.mhr;
+    document.getElementById('hr-rhr').value = btn.dataset.rhr;
+    calcHRZones();
+  });
+});
+
+calcHRZones();
 
 // ─── KEYBOARD SHORTCUT: Enter to calculate ────────────────
 document.addEventListener('keydown', e => {
