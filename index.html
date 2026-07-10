@@ -557,6 +557,7 @@
         <button class="quick-btn" data-mhr="198" data-rhr="45">🔥 Elite</button>
         <button class="quick-btn" data-mhr="180" data-rhr="50">🎯 Fit</button>
         <button class="quick-btn" data-mhr="220" data-rhr="50">🧮 220-age</button>
+        <button class="quick-btn" data-mhr="184" data-rhr="44" data-coros="true">📊 My COROS</button>
       </div>
     </div>
 
@@ -1120,10 +1121,22 @@ document.getElementById('hr-rhr').addEventListener('input', calcHRZones);
 
 document.querySelectorAll('#hr-profiles .quick-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.getElementById('hr-mhr').value = btn.dataset.mhr;
-    document.getElementById('hr-rhr').value = btn.dataset.rhr;
+    const mhr = parseInt(btn.dataset.mhr);
+    const rhr = parseInt(btn.dataset.rhr);
+    document.getElementById('hr-mhr').value = mhr;
+    document.getElementById('hr-rhr').value = rhr;
     calcHRZones();
+    // Sync to race tab
+    document.getElementById('race-mhr').value = mhr;
+    document.getElementById('race-rhr').value = rhr;
+    calcRace();
   });
+});
+
+// Auto-fill race tab on load too
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('race-mhr').value = 184;
+  document.getElementById('race-rhr').value = 44;
 });
 
 calcHRZones();
